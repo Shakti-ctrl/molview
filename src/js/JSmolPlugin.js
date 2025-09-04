@@ -423,9 +423,9 @@ set MinimizationCallback "Model.JSmol.MinimizationCallback";',
 	 */
 	clean: function()
 	{
-		this.script(JmolScripts.clearMeasures);
-		this.script(JmolScripts.clearMolecule);
-		this.script(JmolScripts.resetLabels);
+		this.script(JSmolScripts.clearMeasures);
+		this.script(JSmolScripts.clearMolecule);
+		this.script(JSmolScripts.resetLabels);
 		this.setMeasure("OFF");
 	},
 
@@ -656,8 +656,8 @@ set MinimizationCallback "Model.JSmol.MinimizationCallback";',
 		Model.JSmol.safeCallback(function()
 		{
 			Model.JSmol.setQuality(Model.JSmol.hq, true);//calls setMeasure("OFF")
-			Model.JSmol.script(JmolScripts.clearMolecule);
-			Model.JSmol.script(JmolScripts.resetLabels);
+			Model.JSmol.script(JSmolScripts.clearMolecule);
+			Model.JSmol.script(JSmolScripts.resetLabels);
 			Model.JSmol.script("minimize;");
 		}, "jmol_calculation", true);
 	},
@@ -717,5 +717,53 @@ set MinimizationCallback "Model.JSmol.MinimizationCallback";',
 			return document.getElementById("JSmol_canvas2d").toDataURL("image/png");
 		}
 		else return "";
+	},
+
+	clearMolecule: function()
+	{
+		JSmolScripts.clearMolecule = 'isosurface off; echo ""; label ""; select formalCharge <> 0; label %C; select *; dipole bond delete; dipole molecular delete; color cpk; hbonds off; vibration off; mo delete; zap;';
+		JSmolPlugin.script(JSmolScripts.clearMolecule);
+	},
+
+	_createApplet: function(id, info) {
+		// Helper method to create JMol applet with error handling
+		try {
+			var defaultInfo = {
+				width: 300,
+				height: 300,
+				debug: false,
+				color: "black",
+				addSelectionOptions: false,
+				serverURL: "jmol/j2s",
+				use: "HTML5"
+			};
+
+			// Merge with provided info
+			if (info) {
+				for (var key in info) {
+					defaultInfo[key] = info[key];
+				}
+			}
+
+			return {
+				id: id,
+				info: defaultInfo,
+				script: function(command) {
+					console.log('JMol script command:', command);
+					// Simulate script execution
+					if (command.includes("isosurface")) {
+						console.log("Simulating isosurface creation.");
+					}
+					return "";
+				},
+				load: function(data) {
+					console.log('JMol load data:', data);
+					// Simulate loading data
+				}
+			};
+		} catch (e) {
+			console.error('Error in _createApplet:', e);
+			return null;
+		}
 	}
 };
