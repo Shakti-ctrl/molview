@@ -126,6 +126,11 @@ Query parameters:
                                                         📦 Install App
                                                 </button>
                                         </li>
+                                        <li id="desktop-mode-btn">
+                                                <button id="desktop-mode-button" style="background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 4px; margin-right: 10px; cursor: pointer; font-size: 13px;" title="Toggle Desktop Mode" onclick="toggleDesktopMode()">
+                                                        💻 Desktop Mode
+                                                </button>
+                                        </li>
                                         <li id="molview-dropdown" class="dropdown">
                                                 <a class="dropdown-toggle">MolView</a>
                                                 <ul class="dropdown-menu">
@@ -322,6 +327,12 @@ Query parameters:
                                         </div>
                                 </div>
                                 <div id="model">
+                                        <!-- 3D View Refresh Button -->
+                                        <div style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+                                                <button id="refresh-3d-button" style="background: #FF9800; color: white; border: none; padding: 8px 12px; border-radius: 50%; cursor: pointer; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);" title="Refresh 3D View" onclick="refresh3DView()">
+                                                        🔄
+                                                </button>
+                                        </div>
                                         <!-- Get preferred model background color from localStorage -->
                                         <script type="text/javascript">
                                                 if(localStorage && localStorage["model.background"])
@@ -1657,6 +1668,76 @@ Query parameters:
                                 }
                         }
                 };
+
+                // Desktop Mode and 3D Refresh functionality
+                function toggleDesktopMode() {
+                        const button = document.getElementById('desktop-mode-button');
+                        const viewport = document.querySelector('meta[name="viewport"]');
+                        
+                        if (viewport && viewport.content.includes('user-scalable=no')) {
+                                // Enable desktop mode (allow scaling and wider viewport)
+                                viewport.content = 'width=device-width, initial-scale=0.5, maximum-scale=3.0, user-scalable=yes';
+                                button.innerHTML = '📱 Mobile Mode';
+                                button.style.background = '#4CAF50';
+                                button.title = 'Switch to Mobile Mode';
+                                
+                                // Apply desktop-like CSS
+                                document.body.style.minWidth = '1200px';
+                                document.body.style.transform = 'scale(0.8)';
+                                document.body.style.transformOrigin = 'top left';
+                        } else {
+                                // Enable mobile mode (restore original settings)
+                                viewport.content = 'width=device-width, user-scalable=no';
+                                button.innerHTML = '💻 Desktop Mode';
+                                button.style.background = '#2196F3';
+                                button.title = 'Toggle Desktop Mode';
+                                
+                                // Remove desktop CSS
+                                document.body.style.minWidth = '';
+                                document.body.style.transform = '';
+                                document.body.style.transformOrigin = '';
+                        }
+                }
+
+                function refresh3DView() {
+                        const button = document.getElementById('refresh-3d-button');
+                        
+                        // Add visual feedback
+                        button.style.transform = 'rotate(360deg)';
+                        button.style.transition = 'transform 0.5s ease';
+                        
+                        setTimeout(() => {
+                                button.style.transform = '';
+                                button.style.transition = '';
+                        }, 500);
+                        
+                        // Trigger 3D view refresh by calling MolView's resolve function
+                        try {
+                                if (typeof Messages !== 'undefined') {
+                                        Messages.process({
+                                                type: "update",
+                                                data: "Refreshing 3D view..."
+                                        });
+                                }
+                                
+                                // Force 3D model update
+                                if (typeof Model !== 'undefined' && Model.data && Model.data.source) {
+                                        // Re-render the current model
+                                        Model.render();
+                                } else if (typeof Action !== 'undefined' && typeof Action.resolve === 'function') {
+                                        // Use MolView's resolve action to update 3D view
+                                        Action.resolve();
+                                } else {
+                                        // Fallback: try to click the 2D to 3D button
+                                        const resolveButton = document.getElementById('action-resolve');
+                                        if (resolveButton && resolveButton.click) {
+                                                resolveButton.click();
+                                        }
+                                }
+                        } catch (error) {
+                                console.log('3D refresh initiated');
+                        }
+                }
 
                 // PWA Installation functionality
                 const PWAInstaller = {
