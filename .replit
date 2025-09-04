@@ -5,7 +5,7 @@ integrations = ["javascript_database==1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["sqlite", "openssh_gssapi", "android-tools", "gradle", "openjdk17", "openjdk8", "wget", "unzip", "curl"]
+packages = ["sqlite", "openssh_gssapi", "android-tools", "gradle", "openjdk17", "openjdk8", "wget", "unzip", "curl", "imagemagick"]
 
 [workflows]
 runButton = "Project"
