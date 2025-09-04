@@ -3,7 +3,7 @@
  * Copyright (c) 2014-2023 Herman Bergwerf
  */
 
-var JmolScripts = {
+var JSmolScripts = {
 	basicSettings: "",
 	select: {
 		molecules: "select *; select remove protein or nucleic;",
@@ -38,7 +38,7 @@ select nucleic; color ribbon red; color backbone red;",
 	resetLabels: "select *; hover off; color measures magenta; font measure 18;",
 	clearMeasures: 'measure off; measure delete;',
 	clearMolecule: 'isosurface off; echo ""; label ""; select formalCharge <> 0; label %C; select *; dipole bond delete; dipole molecular delete; color cpk; hbonds off; vibration off; mo delete;',
-	
+
 	// Additional calculation scripts
 	calculations: {
 		orbitals: "mo homo; isosurface mo nomesh fill translucent;",
@@ -101,7 +101,7 @@ var JSmolPlugin = {
 			if(cb) cb();
 			return false;
 		}
-		
+
 		// Initialize core Java objects if missing
 		if (typeof window.java === 'undefined') {
 			window.java = {
