@@ -37,7 +37,19 @@ select nucleic; color ribbon red; color backbone red;",
 	},
 	resetLabels: "select *; hover off; color measures magenta; font measure 18;",
 	clearMeasures: 'measure off; measure delete;',
-	clearMolecule: 'isosurface off; echo ""; label ""; select formalCharge <> 0; label %C; select *; dipole bond delete; dipole molecular delete; color cpk;'
+	clearMolecule: 'isosurface off; echo ""; label ""; select formalCharge <> 0; label %C; select *; dipole bond delete; dipole molecular delete; color cpk; hbonds off; vibration off; mo delete;',
+	
+	// Additional calculation scripts
+	calculations: {
+		orbitals: "mo homo; isosurface mo nomesh fill translucent;",
+		vdw: "isosurface vdw translucent;",
+		sasurface: "isosurface sasurface translucent;",
+		nmr: "calculate nmr; label on; font label 12;",
+		ir: "calculate ir; vibration on;",
+		hbonds: "calculate hbonds; hbonds on; hbonds 3.2;",
+		unitcell: "set showunitcell true;",
+		symmetry: "show symmetry; draw symmetry;"
+	}
 };
 
 /**
@@ -84,7 +96,29 @@ var JSmolPlugin = {
 
 	init: function(cb)
 	{
-		if(Jmol === undefined) return;
+		if(typeof Jmol === 'undefined') {
+			console.error("Jmol is not loaded");
+			if(cb) cb();
+			return false;
+		}
+		
+		// Initialize core Java objects if missing
+		if (typeof window.java === 'undefined') {
+			window.java = {
+				util: {
+					Hashtable: function() {
+						this.data = {};
+						this.put = function(key, value) { this.data[key] = value; };
+						this.get = function(key) { return this.data[key]; };
+						this.containsKey = function(key) { return key in this.data; };
+						this.remove = function(key) { delete this.data[key]; };
+						this.size = function() { return Object.keys(this.data).length; };
+						this.keys = function() { return Object.keys(this.data); };
+					}
+				}
+			};
+		}
+
 		delete Jmol._tracker;
 
 		if(Detector.canvas)
@@ -93,18 +127,19 @@ var JSmolPlugin = {
 
 			Messages.process(function()
 			{
-				Jmol.setDocument(false);
-				Jmol.getApplet("JSmol", {
-					width: $("#model").width(),
-					height: $("#model").height(),
-					debug: false,
-					showfrank: false,
-					disableJ2SLoadMonitor: true,
-					disableInitialConsole: true,
-					allowJavaScript: true,
-					use: "HTML5",
-					j2sPath: MolView.JMOL_J2S_PATH,
-					script: 'unbind _setMeasure; unbind "MIDDLE DRAG" "_rotateZorZoom"; bind "MIDDLE DRAG" "_translate";\
+				try {
+					Jmol.setDocument(false);
+					Jmol.getApplet("JSmol", {
+						width: $("#model").width(),
+						height: $("#model").height(),
+						debug: false,
+						showfrank: false,
+						disableJ2SLoadMonitor: true,
+						disableInitialConsole: true,
+						allowJavaScript: true,
+						use: "HTML5",
+						j2sPath: MolView.JMOL_J2S_PATH,
+						script: 'unbind _setMeasure; unbind "MIDDLE DRAG" "_rotateZorZoom"; bind "MIDDLE DRAG" "_translate";\
 frank off; set specular off;\
 background ' + Model.bg.jmol + '; color label ' + Model.bg.jmol + ';\
 background echo ' + Model.bg.jmol + '; color echo ' + Model.bg.jmol + ';\
@@ -112,10 +147,15 @@ set antialiasDisplay true; set disablePopupMenu true; set showunitcelldetails fa
 set hoverDelay 0.001; hover off; font measure 18; font echo 18 serif bold; set echo top left;\
 set MessageCallback "Model.JSmol.MessageCallback";\
 set MinimizationCallback "Model.JSmol.MinimizationCallback";',
-					readyFunction: Model.JSmol.ReadyCallback.bind(Model.JSmol),
-					console: "none"
-				});
-				$("#jsmol").html(Jmol.getAppletHtml(JSmol));
+						readyFunction: Model.JSmol.ReadyCallback.bind(Model.JSmol),
+						console: "none"
+					});
+					$("#jsmol").html(Jmol.getAppletHtml(JSmol));
+				} catch (e) {
+					console.error("Error initializing JMol:", e);
+					Messages.alert("jmol_init_error");
+					if(cb) cb();
+				}
 			}, "init_jmol");
 
 			return true;
@@ -464,6 +504,146 @@ set MinimizationCallback "Model.JSmol.MinimizationCallback";',
 			Model.JSmol._setMeasure("OFF");
 			Model.JSmol.calculatePartialCharge();
 			Model.JSmol.script("dipole molecular on; dipole calculate molecular; hover off;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Calculate and display atomic orbitals
+	 */
+	displayOrbitals: function(orbitalType)
+	{
+		//exit when macromolecule
+		if(Model.isPDB()) return;
+
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			var script = "isosurface delete; ";
+			switch(orbitalType) {
+				case "HOMO":
+					script += "mo homo; isosurface mo nomesh fill translucent;";
+					break;
+				case "LUMO":
+					script += "mo lumo; isosurface mo nomesh fill translucent;";
+					break;
+				case "all":
+					script += "mo 1; isosurface mo nomesh fill translucent;";
+					break;
+			}
+			Model.JSmol.script(script + "hover off;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Display van der Waals surface
+	 */
+	displayVDWSurface: function(translucent)
+	{
+		//exit when macromolecule
+		if(Model.isPDB()) return;
+
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("isosurface vdw " + (translucent ? "translucent" : "opaque") + "; hover off;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Display solvent accessible surface
+	 */
+	displaySASurface: function(translucent)
+	{
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("isosurface sasurface " + (translucent ? "translucent" : "opaque") + "; hover off;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Calculate and display NMR data
+	 */
+	displayNMR: function()
+	{
+		//exit when macromolecule
+		if(Model.isPDB()) return;
+
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("calculate nmr; label on; font label 12;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Calculate and display IR frequencies
+	 */
+	displayIR: function()
+	{
+		//exit when macromolecule
+		if(Model.isPDB()) return;
+
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("calculate ir; vibration on;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Display protein secondary structure
+	 */
+	displaySecondaryStructure: function()
+	{
+		if(!Model.isPDB()) return;
+
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("select protein; cartoon only; color cartoon structure;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Calculate and display hydrogen bonds
+	 */
+	displayHydrogenBonds: function()
+	{
+		MolView.makeModelVisible();
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("calculate hbonds; hbonds on; hbonds 3.2;");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Display unit cell for crystals
+	 */
+	displayUnitCell: function(show)
+	{
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol.script("set showunitcell " + (show ? "true" : "false") + ";");
+		}, "jmol_calculation");
+	},
+
+	/**
+	 * Display symmetry operations
+	 */
+	displaySymmetry: function()
+	{
+		Model.JSmol.safeCallback(function()
+		{
+			Model.JSmol._setMeasure("OFF");
+			Model.JSmol.script("show symmetry; draw symmetry;");
 		}, "jmol_calculation");
 	},
 
