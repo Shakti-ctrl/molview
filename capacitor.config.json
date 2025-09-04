@@ -1,0 +1,13 @@
+{
+  "appId": "com.molview.app",
+  "appName": "MolView",
+  "webDir": "www",
+  "server": {
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "Network": {
+      "enabled": true
+    }
+  }
+}
