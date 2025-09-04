@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "php-8.2", "web", "bash", "php-8.3"]
+modules = ["nodejs-20", "php-8.2", "web", "bash"]
 [agent]
 expertMode = true
 integrations = ["javascript_database==1.0.0"]
@@ -50,5 +50,5 @@ externalPort = 8080
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["php", "-S", "0.0.0.0:5000"]
-build = ["grunt"]
+run = ["php", "-c", "php.ini", "-S", "0.0.0.0:5000"]
+build = ["npm", "install", "&&", "bower", "install", "&&", "npx", "grunt"]
