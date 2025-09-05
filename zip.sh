@@ -1,14 +1,34 @@
+
 #!/bin/bash
 
-cp -r pages embed/pages
-cp -r php embed/php
+# Create a clean zip file for web app deployment
+# Excluding android folder and unnecessary build files
 
-cp page.php embed/page.php
-cp favicon.ico embed/favicon.ico
+zip -r MolView-WebApp.zip \
+	src \
+	www \
+	php \
+	pages \
+	docs \
+	embed \
+	img \
+	jmol \
+	.htaccess \
+	robots.txt \
+	index.html \
+	page.php \
+	favicon.ico \
+	manifest.json \
+	php.ini \
+	package.json \
+	bower.json \
+	Gruntfile.js \
+	build.sh \
+	README.md \
+	COPYRIGHT.md \
+	LEGAL.md \
+	replit.md \
+	capacitor.config.json \
+	-x "*/build/*" "*/node_modules/*" "*/.gradle/*" "*/intermediates/*" "*/outputs/*" "*/.git/*"
 
-cp -r build embed/v1/build
-cp -r jmol embed/v1/jmol
-
-zip -r MolView.zip \
-	build img jmol pages php embed \
-	.htaccess robots.txt index.html page.php favicon.ico *.md *.png
+echo "Created MolView-WebApp.zip excluding android and build files"
